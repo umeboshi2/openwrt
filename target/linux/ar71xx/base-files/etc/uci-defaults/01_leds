@@ -336,6 +336,12 @@ wzr-hp-g300nh)
 	ucidef_set_led_usbdev "usb" "USB" "buffalo:blue:usb" "1-1"
 	;;
 
+wzr-hp-g300nh2)
+	ucidef_set_led_default "diag" "DIAG" "buffalo:red:diag" "0" "none"
+	ucidef_set_led_wlan "wlan" "Wireless" "ath9k-phy0" "phy0tpt"
+	ucidef_set_led_netdev "router" "Router" "buffalo:green:router" "eth0.2"
+	;;
+
 zcn-1523h-2)
 	ucidef_set_led_netdev "lan1" "lan1" "zcn-1523h:green:lan1" "eth0"
 	;;
