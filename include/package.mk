@@ -14,6 +14,13 @@ PKG_INSTALL_DIR ?= $(PKG_BUILD_DIR)/ipkg-install
 PKG_MD5SUM ?= unknown
 PKG_BUILD_PARALLEL ?=
 PKG_USE_MIPS16 ?= 1
+PKG_CHECK_FORMAT_SECURITY ?= 1
+PKG_CC_STACKPROTECTOR_REGULAR ?= 1
+PKG_CC_STACKPROTECTOR_STRONG ?= 1
+PKG_FORTIFY_SOURCE_1 ?= 1
+PKG_FORTIFY_SOURCE_2 ?= 1
+PKG_RELRO_PARTIAL ?= 1
+PKG_RELRO_FULL ?= 1
 
 ifneq ($(CONFIG_PKG_BUILD_USE_JOBSERVER),)
   MAKE_J:=$(if $(MAKE_JOBSERVER),$(MAKE_JOBSERVER) -j)
@@ -31,6 +38,41 @@ ifdef CONFIG_USE_MIPS16
   ifeq ($(strip $(PKG_USE_MIPS16)),1)
     TARGET_ASFLAGS_DEFAULT = $(filter-out -mips16 -minterlink-mips16,$(TARGET_CFLAGS))
     TARGET_CFLAGS += -mips16 -minterlink-mips16
+  endif
+endif
+ifdef CONFIG_PKG_CHECK_FORMAT_SECURITY
+  ifeq ($(strip $(PKG_CHECK_FORMAT_SECURITY)),1)
+    TARGET_CFLAGS += -Wformat -Werror=format-security
+  endif
+endif
+ifdef CONFIG_PKG_CC_STACKPROTECTOR_REGULAR
+  ifeq ($(strip $(PKG_CC_STACKPROTECTOR_REGULAR)),1)
+    TARGET_CFLAGS += -fstack-protector
+  endif
+endif
+ifdef CONFIG_PKG_CC_STACKPROTECTOR_STRONG
+  ifeq ($(strip $(PKG_CC_STACKPROTECTOR_STRONG)),1)
+    TARGET_CFLAGS += -fstack-protector-strong
+  endif
+endif
+ifdef CONFIG_PKG_FORTIFY_SOURCE_1
+  ifeq ($(strip $(PKG_FORTIFY_SOURCE_1)),1)
+    TARGET_CFLAGS += -D_FORTIFY_SOURCE=1
+  endif
+endif
+ifdef CONFIG_PKG_FORTIFY_SOURCE_2
+  ifeq ($(strip $(PKG_FORTIFY_SOURCE_2)),1)
+    TARGET_CFLAGS += -D_FORTIFY_SOURCE=2
+  endif
+endif
+ifdef CONFIG_PKG_RELRO_PARTIAL
+  ifeq ($(strip $(PKG_RELRO_PARTIAL)),1)
+    TARGET_CFLAGS += -Wl,-z,relro
+  endif
+endif
+ifdef CONFIG_PKG_RELRO_FULL
+  ifeq ($(strip $(PKG_RELRO_FULL)),1)
+    TARGET_CFLAGS += -Wl,-z,now -Wl,-z,relro
   endif
 endif
 
@@ -56,14 +98,20 @@ ifneq ($(PREV_STAMP_PREPARED),)
 else
   STAMP_PREPARED=$(PKG_BUILD_DIR)/.prepared$(if $(QUILT)$(DUMP),,_$(shell $(call find_md5,${CURDIR} $(PKG_FILE_DEPENDS),))$(call confvar,$(PKG_PREPARED_DEPENDS)))
 endif
-STAMP_CONFIGURED:=$(PKG_BUILD_DIR)/.configured$(if $(DUMP),,_$(call confvar,$(PKG_CONFIG_DEPENDS)))
+STAMP_CONFIGURED=$(PKG_BUILD_DIR)/.configured$(if $(DUMP),,_$(call confvar,$(PKG_CONFIG_DEPENDS)))
 STAMP_CONFIGURED_WILDCARD=$(patsubst %_$(call confvar,$(PKG_CONFIG_DEPENDS)),%_*,$(STAMP_CONFIGURED))
 STAMP_BUILT:=$(PKG_BUILD_DIR)/.built
-STAMP_INSTALLED:=$(STAGING_DIR)/stamp/.$(PKG_NAME)_installed
+STAMP_INSTALLED:=$(STAGING_DIR)/stamp/.$(PKG_NAME)$(if $(BUILD_VARIANT),.$(BUILD_VARIANT),)_installed
 
 STAGING_FILES_LIST:=$(PKG_NAME)$(if $(BUILD_VARIANT),.$(BUILD_VARIANT),).list
 ifneq ($(if $(CONFIG_SRC_TREE_OVERRIDE),$(wildcard ./git-src)),)
   USE_GIT_TREE:=1
+  QUILT:=1
+endif
+ifdef USE_SOURCE_DIR
+  QUILT:=1
+endif
+ifneq ($(wildcard $(PKG_BUILD_DIR)/.source_dir),)
   QUILT:=1
 endif
 
@@ -79,11 +127,11 @@ include $(INCLUDE_DIR)/package-bin.mk
 include $(INCLUDE_DIR)/autotools.mk
 
 override MAKEFLAGS=
-CONFIG_SITE:=$(INCLUDE_DIR)/site/$(REAL_GNU_TARGET_NAME)
+CONFIG_SITE:=$(INCLUDE_DIR)/site/$(ARCH)
 CUR_MAKEFILE:=$(filter-out Makefile,$(firstword $(MAKEFILE_LIST)))
 SUBMAKE:=$(NO_TRACE_MAKE) $(if $(CUR_MAKEFILE),-f $(CUR_MAKEFILE))
 PKG_CONFIG_PATH=$(STAGING_DIR)/usr/lib/pkgconfig:$(STAGING_DIR)/usr/share/pkgconfig
-unexport QUIET
+unexport QUIET CONFIG_SITE
 
 ifeq ($(DUMP)$(filter prereq clean refresh update,$(MAKECMDGOALS)),)
   ifneq ($(if $(QUILT),,$(CONFIG_AUTOREBUILD)),)
@@ -93,20 +141,6 @@ ifeq ($(DUMP)$(filter prereq clean refresh update,$(MAKECMDGOALS)),)
       $(if $(filter prepare,$(MAKECMDGOALS)),,$(call rdep,$(PKG_BUILD_DIR),$(STAMP_BUILT),,-x "*/.dep_*" -x "*/ipkg*"))
     endef
   endif
-endif
-
-ifeq ($(CONFIG_$(PKG_NAME)_USE_CUSTOM_SOURCE_DIR),y)
-# disable load stage
-PKG_SOURCE_URL:=
-# add hook to install a link to customer source path of dedicated package
-Hooks/Prepare/Pre += prepare_custom_source_directory
-ifeq ($(filter autoreconf,$(Hooks/Configure/Pre)),)
-  Hooks/Configure/Pre += autoreconf_target
-endif
-# define empty default action
-define Build/Prepare/Default
-	@: 
-endef
 endif
 
 define Download/default
@@ -127,6 +161,14 @@ ifdef USE_GIT_TREE
 	( cd $(PKG_BUILD_DIR); git checkout .)
   endef
 endif
+ifdef USE_SOURCE_DIR
+  define Build/Prepare/Default
+	rm -rf $(PKG_BUILD_DIR)
+	$(if $(wildcard $(USE_SOURCE_DIR)/*),,@echo "Error: USE_SOURCE_DIR=$(USE_SOURCE_DIR) path not found"; false)
+	ln -snf $(USE_SOURCE_DIR) $(PKG_BUILD_DIR)
+	touch $(PKG_BUILD_DIR)/.source_dir
+  endef
+endif
 
 define Build/Exports/Default
   $(1) : export ACLOCAL_INCLUDE=$$(foreach p,$$(wildcard $$(STAGING_DIR)/usr/share/aclocal $$(STAGING_DIR)/usr/share/aclocal-* $$(STAGING_DIR)/host/share/aclocal $$(STAGING_DIR)/host/share/aclocal-*),-I $$(p))
@@ -141,7 +183,7 @@ Build/Exports=$(Build/Exports/Default)
 
 define Build/DefaultTargets
   $(if $(QUILT),$(Build/Quilt))
-  $(if $(USE_GIT_TREE),,$(if $(strip $(PKG_SOURCE_URL)),$(call Download,default)))
+  $(if $(USE_SOURCE_DIR)$(USE_GIT_TREE),,$(if $(strip $(PKG_SOURCE_URL)),$(call Download,default)))
   $(call Build/Autoclean)
 
   download:
@@ -245,9 +287,6 @@ endif
     endif
   )
 
-  $(call shexport,Package/$(1)/description)
-  $(call shexport,Package/$(1)/config)
-
   $(if $(DUMP), \
     $(Dumpinfo/Package), \
     $(foreach target, \
@@ -308,6 +347,6 @@ clean: clean-staging FORCE
 
 dist:
 	$(Build/Dist)
-   
+
 distcheck:
-	$(Build/DistCheck) 
+	$(Build/DistCheck)

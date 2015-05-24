@@ -72,7 +72,7 @@ define KernelPackage/lib-crc16
   TITLE:=CRC16 support
   KCONFIG:=CONFIG_CRC16
   FILES:=$(LINUX_DIR)/lib/crc16.ko
-  AUTOLOAD:=$(call AutoProbe,crc16)
+  AUTOLOAD:=$(call AutoLoad,20,crc16,1)
 endef
 
 define KernelPackage/lib-crc16/description
@@ -117,6 +117,25 @@ endef
 $(eval $(call KernelPackage,lib-lzo))
 
 
+define KernelPackage/lib-lz4
+  SUBMENU:=$(LIB_MENU)
+  TITLE:=LZ4 support
+  KCONFIG:= \
+	CONFIG_LZ4_COMPRESS \
+	CONFIG_LZ4_DECOMPRESS
+  FILES:= \
+	$(LINUX_DIR)/lib/lz4/lz4_compress.ko \
+	$(LINUX_DIR)/lib/lz4/lz4_decompress.ko
+  AUTOLOAD:=$(call AutoProbe,lz4_compress lz4_decompress)
+endef
+
+define KernelPackage/lib-lz4/description
+ Kernel module for LZ4 compression/decompression support
+endef
+
+$(eval $(call KernelPackage,lib-lz4))
+
+
 define KernelPackage/lib-raid6
   SUBMENU:=$(LIB_MENU)
   TITLE:=RAID6 algorithm support
@@ -138,8 +157,15 @@ define KernelPackage/lib-xor
   TITLE:=XOR blocks algorithm support
   HIDDEN:=1
   KCONFIG:=CONFIG_XOR_BLOCKS
+ifneq ($(wildcard $(LINUX_DIR)/arch/arm/lib/xor-neon.ko),)
+  FILES:= \
+    $(LINUX_DIR)/crypto/xor.ko \
+    $(LINUX_DIR)/arch/arm/lib/xor-neon.ko
+  AUTOLOAD:=$(call AutoProbe,xor-neon xor)
+else
   FILES:=$(LINUX_DIR)/crypto/xor.ko
   AUTOLOAD:=$(call AutoProbe,xor)
+endif
 endef
 
 define KernelPackage/lib-xor/description

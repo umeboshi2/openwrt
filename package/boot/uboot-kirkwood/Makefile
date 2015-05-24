@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2010-2013 OpenWrt.org
+# Copyright (C) 2010-2014 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -8,16 +8,19 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=u-boot
-PKG_VERSION:=2013.10
+PKG_VERSION:=2014.10
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:= \
+PKG_SOURCE_URL:=\
 	http://mirror2.openwrt.org/sources \
 	ftp://ftp.denx.de/pub/u-boot
-PKG_MD5SUM:=a076a044b64371edc52f7e562b13f6b2
+PKG_MD5SUM:=3ddcaee2f05b7c464778112ec83664b5
 PKG_TARGETS:=bin
+
+PKG_LICENSE:=GPL-2.0 GPL-2.0+
+PKG_LICENSE_FILES:=Licenses/README
 
 PKG_BUILD_PARALLEL:=1
 
@@ -25,8 +28,6 @@ include $(INCLUDE_DIR)/package.mk
 
 define uboot/Default
   TITLE:=
-  CONFIG:=
-  IMAGE:=
 endef
 
 define uboot/dockstar
@@ -61,6 +62,10 @@ define uboot/pogo_e02
   TITLE:=U-Boot for Cloud Engines Pogoplug E02
 endef
 
+define uboot/pogo_e02_second_stage
+  TITLE:=second stage U-Boot for Cloud Engines Pogoplug E02
+endef
+
 define uboot/sheevaplug
   TITLE:=U-Boot for SheevaPlug
 endef
@@ -70,7 +75,7 @@ UBOOTS:= \
 	goflexhome \
 	ib62x0 ib62x0_second_stage \
 	iconnect iconnect_second_stage \
-	pogo_e02 \
+	pogo_e02 pogo_e02_second_stage \
 	sheevaplug
 
 define Package/uboot/template
@@ -90,15 +95,15 @@ define BuildUBootPackage
 	$(call Package/uboot/template,$(1),$(TITLE))
 endef
 
-ifdef BUILD_VARIANT
-$(eval $(call uboot/$(BUILD_VARIANT)))
-UBOOT_CONFIG:=$(if $(CONFIG),$(CONFIG),$(BUILD_VARIANT))
-UBOOT_IMAGE:=$(if $(IMAGE),$(IMAGE),openwrt-$(BOARD)-$(BUILD_VARIANT)-u-boot.bin)
-endif
-
 define Build/Configure
+	$(if $(findstring _second_stage,$(BUILD_VARIANT)),
+		$(CP) \
+			$(PKG_BUILD_DIR)/configs/$(subst _second_stage,,$(BUILD_VARIANT))_defconfig \
+			$(PKG_BUILD_DIR)/configs/$(BUILD_VARIANT)_defconfig
+		echo CONFIG_SECOND_STAGE=y >> $(PKG_BUILD_DIR)/configs/$(BUILD_VARIANT)_defconfig
+	)
 	+$(MAKE) $(PKG_JOBS) -C $(PKG_BUILD_DIR) \
-		$(UBOOT_CONFIG)_config
+		$(BUILD_VARIANT)_config V=1
 endef
 
 define Build/Compile

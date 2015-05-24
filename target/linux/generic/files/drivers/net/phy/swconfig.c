@@ -167,12 +167,14 @@ swconfig_get_link(struct switch_dev *dev, const struct switch_attr *attr,
 
 	if (link.link)
 		len = snprintf(dev->buf, sizeof(dev->buf),
-			       "port:%d link:up speed:%s %s-duplex %s%s%s",
+			       "port:%d link:up speed:%s %s-duplex %s%s%s%s%s",
 			       val->port_vlan,
 			       swconfig_speed_str(link.speed),
 			       link.duplex ? "full" : "half",
 			       link.tx_flow ? "txflow " : "",
 			       link.rx_flow ?	"rxflow " : "",
+			       link.eee & ADVERTISED_100baseT_Full ? "eee100 " : "",
+			       link.eee & ADVERTISED_1000baseT_Full ? "eee1000 " : "",
 			       link.aneg ? "auto" : "");
 	else
 		len = snprintf(dev->buf, sizeof(dev->buf), "port:%d link:down",
@@ -394,7 +396,8 @@ swconfig_dump_attr(struct swconfig_callback *cb, void *arg)
 			op->description))
 			goto nla_put_failure;
 
-	return genlmsg_end(msg, hdr);
+	genlmsg_end(msg, hdr);
+	return msg->len;
 nla_put_failure:
 	genlmsg_cancel(msg, hdr);
 	return -EMSGSIZE;
@@ -826,7 +829,8 @@ swconfig_get_attr(struct sk_buff *skb, struct genl_info *info)
 		err = -EINVAL;
 		goto error;
 	}
-	err = genlmsg_end(msg, hdr);
+	genlmsg_end(msg, hdr);
+	err = msg->len;
 	if (err < 0)
 		goto nla_put_failure;
 
@@ -889,7 +893,8 @@ swconfig_send_switch(struct sk_buff *msg, u32 pid, u32 seq, int flags,
 		nla_nest_end(msg, p);
 	}
 	nla_nest_end(msg, m);
-	return genlmsg_end(msg, hdr);
+	genlmsg_end(msg, hdr);
+	return msg->len;
 nla_put_failure:
 	genlmsg_cancel(msg, hdr);
 	return -EMSGSIZE;
@@ -1079,7 +1084,7 @@ register_switch(struct switch_dev *dev, struct net_device *netdev)
 	/* fill device name */
 	snprintf(dev->devname, IFNAMSIZ, SWCONFIG_DEVNAME, i);
 
-	list_add(&dev->dev_list, &swdevs);
+	list_add_tail(&dev->dev_list, &swdevs);
 	swconfig_unlock();
 
 	err = swconfig_create_led_trigger(dev);
@@ -1107,7 +1112,10 @@ EXPORT_SYMBOL_GPL(unregister_switch);
 static int __init
 swconfig_init(void)
 {
-	int i, err;
+	int err;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0))
+	int i;
+#endif
 
 	INIT_LIST_HEAD(&swdevs);
 	
@@ -1121,16 +1129,17 @@ swconfig_init(void)
 		if (err)
 			goto unregister;
 	}
-#else
-	err = genl_register_family_with_ops(&switch_fam, swconfig_ops);
-	if (err)
-		return err;
-#endif
 	return 0;
 
 unregister:
 	genl_unregister_family(&switch_fam);
 	return err;
+#else
+	err = genl_register_family_with_ops(&switch_fam, swconfig_ops);
+	if (err)
+		return err;
+	return 0;
+#endif
 }
 
 static void __exit

@@ -120,6 +120,7 @@ disable_broadcom() {
 
 		wlc ifname "$device" stdin <<EOF
 $ifdown
+leddc 0xffff
 EOF
 	)
 	true
@@ -198,13 +199,27 @@ enable_broadcom() {
 	}
 
 	# Use 'chanspec' instead of 'channel' for 'N' modes (See bcmwifi.h)
-	[ ${nmode:-0} -ne 0 -a -n "$band" -a -n "$channel" ] && {
+	[ -n "$nmode" -a -n "$band" -a -n "$channel" ] && {
 		case "$htmode" in
-			HT40-)	chanspec=$(printf 0x%x%x%02x $band 0xe $(($channel - 2))); channel=;;
-			HT40+)	chanspec=$(printf 0x%x%x%02x $band 0xd $(($channel + 2))); channel=;;
-			HT20)	chanspec=$(printf 0x%x%x%02x $band 0xb $channel); channel=;;
+			HT40)
+				if [ -n "$gmode" ]; then
+					[ $channel -lt 7 ] && htmode="HT40+" || htmode="HT40-"
+				else
+					[ $(( ($channel / 4) % 2 )) -eq 1 ] && htmode="HT40+" || htmode="HT40-"
+				fi
+			;;
+		esac
+		case "$htmode" in
+			HT40-)	chanspec=$(printf 0x%x%x%02x $band 0xe $(($channel - 2))); nmode=1; channel=;;
+			HT40+)	chanspec=$(printf 0x%x%x%02x $band 0xd $(($channel + 2))); nmode=1; channel=;;
+			HT20)	chanspec=$(printf 0x%x%x%02x $band 0xb $channel); nmode=1; channel=;;
 			*) ;;
 		esac
+	}
+
+	local leddc=$(wlc ifname "$device" leddc)
+	[ "$leddc" -eq 0xffff ] || {
+		leddc=0x005a000a;
 	}
 
 	local _c=0
@@ -358,6 +373,7 @@ enable_broadcom() {
 		[ "$ifname" != "${ifname##${device}-}" ] && if_cmd="if_up"
 		append $if_cmd "macaddr=\$(wlc ifname '$ifname' cur_etheraddr)" ";$N"
 		append $if_cmd "ifconfig '$ifname' \${macaddr:+hw ether \$macaddr}" ";$N"
+		append if_up "ifconfig '$ifname' up" ";$N"
 
 		local net_cfg="$(find_net_config "$vif")"
 		[ -z "$net_cfg" ] || {
@@ -383,6 +399,7 @@ band ${band:-0}
 ${nmode:+nmode $nmode}
 ${nmode:+${nreqd:+nreqd $nreqd}}
 ${gmode:+gmode $gmode}
+leddc $leddc
 apsta $apsta
 ap $ap
 ${mssid:+mssid $mssid}
@@ -442,7 +459,8 @@ detect_broadcom() {
 config wifi-device  wl${i}
 	option type     broadcom
 	option channel  ${channel:-11}
-
+	option txantenna 3
+	option rxantenna 3
 	# REMOVE THIS LINE TO ENABLE WIFI:
 	option disabled 1
 

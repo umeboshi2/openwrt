@@ -10,7 +10,7 @@ include $(INCLUDE_DIR)/image.mk
 JFFS2_BLOCKSIZE=128k 64k
 
 define Image/Prepare
-	$(LINUX_DIR)/scripts/dtc/dtc -O dtb -R 4 -S 0x20000 $(LINUX_DIR)/arch/powerpc/boot/dts/kilauea.dts > $(KDIR)/openwrt-kilauea.dtb
+	$(LINUX_DIR)/scripts/dtc/dtc -O dtb -R 4 -S 0x20000 $(DTS_DIR)/kilauea.dts > $(KDIR)/openwrt-kilauea.dtb
 endef
 
 define Image/BuildKernel
@@ -53,7 +53,7 @@ define Image/Build/squashfs
 		dd if=$(KDIR)/root.$(1) bs=128k conv=sync; \
 	) > $(BIN_DIR)/$(IMG_PREFIX)-kilauea-$(1).img
 	( \
-		dd if=$(KDIR)/cuImage.magicbox bs=1408k conv=sync; \
+		dd if=$(KDIR)/cuImage.magicbox bs=64k conv=sync; \
 		dd if=$(KDIR)/root.$(1) bs=64k conv=sync; \
 	) > $(BIN_DIR)/$(IMG_PREFIX)-magicbox-$(1).img
 	( \

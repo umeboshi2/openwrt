@@ -22,6 +22,7 @@ PKG_MD5SUM:=536d048c8e8eeebcd9757d0863ebb0c0
 PKG_FIXUP:=autoreconf
 PKG_INSTALL:=1
 PKG_BUILD_PARALLEL:=1
+PKG_LICENSE:=GPL-2.0
 
 ifneq ($(CONFIG_EXTERNAL_KERNEL_TREE),"")
 PATCH_DIR:=
@@ -123,7 +124,6 @@ iptables extensions for packet content inspection.
 Includes support for:
 
  Matches:
-  - layer7
   - string
 
 endef
@@ -194,6 +194,32 @@ iptables extensions for user-space packet logging.
 
 endef
 
+define Package/iptables-mod-nflog
+$(call Package/iptables/Module, +kmod-nfnetlink-log +kmod-ipt-nflog)
+  TITLE:=Netfilter NFLOG target
+endef
+
+define Package/iptables-mod-nflog/description
+ iptables extension for user-space logging via NFNETLINK.
+
+ Includes:
+  - libxt_NFLOG
+
+endef
+
+define Package/iptables-mod-nfqueue
+$(call Package/iptables/Module, +kmod-nfnetlink-queue +kmod-ipt-nfqueue)
+  TITLE:=Netfilter NFQUEUE target
+endef
+
+define Package/iptables-mod-nfqueue/description
+ iptables extension for user-space queuing via NFNETLINK.
+
+ Includes:
+  - libxt_NFQUEUE
+
+endef
+
 define Package/iptables-mod-hashlimit
 $(call Package/iptables/Module, +kmod-ipt-hashlimit)
   TITLE:=hashlimit matching
@@ -218,6 +244,46 @@ iptables extensions for matching ip ranges.
  Matches:
   - iprange
 
+endef
+
+define Package/iptables-mod-cluster
+$(call Package/iptables/Module, +kmod-ipt-cluster)
+  TITLE:=Match cluster extension
+endef
+
+define Package/iptables-mod-cluster/description
+iptables extensions for matching cluster.
+
+ Netfilter (IPv4/IPv6) module for matching cluster
+ This option allows you to build work-load-sharing clusters of
+ network servers/stateful firewalls without having a dedicated
+ load-balancing router/server/switch. Basically, this match returns
+ true when the packet must be handled by this cluster node. Thus,
+ all nodes see all packets and this match decides which node handles
+ what packets. The work-load sharing algorithm is based on source
+ address hashing.
+
+ This module is usable for ipv4 and ipv6.
+
+ If you select it, it enables kmod-ipt-cluster.
+
+ see `iptables -m cluster --help` for more information.
+endef
+
+define Package/iptables-mod-clusterip
+$(call Package/iptables/Module, +kmod-ipt-clusterip)
+  TITLE:=Clusterip extension
+endef
+
+define Package/iptables-mod-clusterip/description
+iptables extensions for CLUSTERIP.
+ The CLUSTERIP target allows you to build load-balancing clusters of
+ network servers without having a dedicated load-balancing
+ router/server/switch.
+
+ If you select it, it enables kmod-ipt-clusterip.
+
+ see `iptables -j CLUSTERIP --help` for more information.
 endef
 
 define Package/iptables-mod-extra
@@ -302,6 +368,16 @@ $(call Package/iptables/Default)
 endef
 
 
+define Package/ip6tables-extra
+$(call Package/iptables/Default)
+  DEPENDS:=ip6tables +kmod-ip6tables-extra
+  TITLE:=IPv6 header matching modules
+endef
+
+define Package/ip6tables-mod-extra/description
+iptables header matching modules for IPv6
+endef
+
 define Package/ip6tables-mod-nat
 $(call Package/iptables/Default)
   DEPENDS:=ip6tables +kmod-ipt-nat6
@@ -359,7 +435,8 @@ CONFIGURE_ARGS += \
 	--enable-devel \
 	--with-kernel="$(LINUX_DIR)/user_headers" \
 	--with-xtlibdir=/usr/lib/iptables \
-	--enable-static
+	--enable-static \
+	$(if $(CONFIG_IPV6),,--disable-ipv6)
 
 MAKE_FLAGS := \
 	$(TARGET_CONFIGURE_OPTS) \
@@ -439,26 +516,26 @@ define BuildPlugin
   $$(eval $$(call BuildPackage,$(1)))
 endef
 
-L7_INSTALL:=\
-	$(INSTALL_DIR) $$(1)/etc/l7-protocols; \
-	$(CP) files/l7/*.pat $$(1)/etc/l7-protocols/
-
-
 $(eval $(call BuildPackage,iptables))
 $(eval $(call BuildPlugin,iptables-mod-conntrack-extra,$(IPT_CONNTRACK_EXTRA-m)))
 $(eval $(call BuildPlugin,iptables-mod-extra,$(IPT_EXTRA-m)))
-$(eval $(call BuildPlugin,iptables-mod-filter,$(IPT_FILTER-m),$(L7_INSTALL)))
+$(eval $(call BuildPlugin,iptables-mod-filter,$(IPT_FILTER-m)))
 $(eval $(call BuildPlugin,iptables-mod-ipopt,$(IPT_IPOPT-m)))
 $(eval $(call BuildPlugin,iptables-mod-ipsec,$(IPT_IPSEC-m)))
 $(eval $(call BuildPlugin,iptables-mod-nat-extra,$(IPT_NAT_EXTRA-m)))
 $(eval $(call BuildPlugin,iptables-mod-iprange,$(IPT_IPRANGE-m)))
+$(eval $(call BuildPlugin,iptables-mod-cluster,$(IPT_CLUSTER-m)))
+$(eval $(call BuildPlugin,iptables-mod-clusterip,$(IPT_CLUSTERIP-m)))
 $(eval $(call BuildPlugin,iptables-mod-ulog,$(IPT_ULOG-m)))
 $(eval $(call BuildPlugin,iptables-mod-hashlimit,$(IPT_HASHLIMIT-m)))
 $(eval $(call BuildPlugin,iptables-mod-led,$(IPT_LED-m)))
 $(eval $(call BuildPlugin,iptables-mod-tproxy,$(IPT_TPROXY-m)))
 $(eval $(call BuildPlugin,iptables-mod-tee,$(IPT_TEE-m)))
 $(eval $(call BuildPlugin,iptables-mod-u32,$(IPT_U32-m)))
+$(eval $(call BuildPlugin,iptables-mod-nflog,$(IPT_NFLOG-m)))
+$(eval $(call BuildPlugin,iptables-mod-nfqueue,$(IPT_NFQUEUE-m)))
 $(eval $(call BuildPackage,ip6tables))
+$(eval $(call BuildPlugin,ip6tables-extra,$(IPT_IPV6_EXTRA-m)))
 $(eval $(call BuildPlugin,ip6tables-mod-nat,$(IPT_NAT6-m)))
 $(eval $(call BuildPackage,libiptc))
 $(eval $(call BuildPackage,libip4tc))

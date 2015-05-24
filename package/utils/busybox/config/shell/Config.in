@@ -73,6 +73,13 @@ config BUSYBOX_CONFIG_ASH_BUILTIN_TEST
 	help
 	  Enable support for test builtin in ash.
 
+config BUSYBOX_CONFIG_ASH_HELP
+	bool "help builtin"
+	default BUSYBOX_DEFAULT_ASH_HELP
+	depends on BUSYBOX_CONFIG_ASH
+	help
+	  Enable help builtin in ash.
+
 config BUSYBOX_CONFIG_ASH_CMDCMD
 	bool "'command' command to override shell builtins"
 	default BUSYBOX_DEFAULT_ASH_CMDCMD
@@ -156,6 +163,9 @@ config BUSYBOX_CONFIG_CTTYHACK
 
 	  # exec setsid sh -c 'exec sh </dev/tty1 >/dev/tty1 2>&1'
 
+	  Starting getty on a controlling tty from a shell script:
+
+	  # getty 115200 $(cttyhack)
 config BUSYBOX_CONFIG_HUSH
 	bool "hush"
 	default BUSYBOX_DEFAULT_HUSH
@@ -290,6 +300,7 @@ config BUSYBOX_CONFIG_MSH
 	select BUSYBOX_CONFIG_HUSH
 	help
 	  msh is deprecated and will be removed, please migrate to hush.
+
 
 
 choice

@@ -64,6 +64,10 @@
 		ralink,fpa2 = <0x1f003fff>;
 	};
 
+	wmac@10180000 {
+		ralink,mtd-eeprom = <&factory 0>;
+	};
+
 	otg@101c0000 {
 		status = "okay";
 	};
@@ -102,7 +106,7 @@
 	};
 
 	rtl8366rb {
-		compatible = "rtl8367rb";
+		compatible = "rtl8366rb";
 		gpio-sda = <&gpio0 1 0>;
 		gpio-sck = <&gpio0 2 0>;
 	};

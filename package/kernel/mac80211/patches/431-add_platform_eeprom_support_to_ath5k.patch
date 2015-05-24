@@ -17,19 +17,19 @@
   */
  static bool
  ath5k_pci_eeprom_read(struct ath_common *common, u32 offset, u16 *data)
-@@ -80,6 +81,19 @@ ath5k_pci_eeprom_read(struct ath_common 
+@@ -80,6 +81,19 @@ ath5k_pci_eeprom_read(struct ath_common
  	struct ath5k_hw *ah = (struct ath5k_hw *) common->ah;
  	u32 status, timeout;
  
 +	struct ath5k_platform_data *pdata = NULL;
-+	
++
 +	if (ah->pdev)
 +		pdata = ah->pdev->dev.platform_data;
 +
 +	if (pdata && pdata->eeprom_data && pdata->eeprom_data[61] == AR5K_EEPROM_MAGIC_VALUE) {
-+		if (offset >= ATH5K_PLAT_EEP_MAX_WORDS) 
++		if (offset >= ATH5K_PLAT_EEP_MAX_WORDS)
 +			return false;
-+		
++
 +		*data = pdata->eeprom_data[offset];
 +		return true;
 +	}

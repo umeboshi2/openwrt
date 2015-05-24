@@ -3,15 +3,12 @@
 # Copyright (C) 2010 Vertical Communications
 
 do_mount_root() {
-	fs-state start
+	mount_root
 	boot_run_hook preinit_mount_root
 	[ -f /sysupgrade.tgz ] && {
 		echo "- config restore -"
 		cd /
-		mv sysupgrade.tgz /tmp
-		tar xzf /tmp/sysupgrade.tgz
-		rm -f /tmp/sysupgrade.tgz
-		sync
+		tar xzf /sysupgrade.tgz
 	}
 }
 

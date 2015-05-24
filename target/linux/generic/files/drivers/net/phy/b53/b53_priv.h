@@ -150,7 +150,7 @@ static inline int is63xx(struct b53_device *dev)
 	return 0;
 #endif
 }
-	
+
 static inline int is5301x(struct b53_device *dev)
 {
 	return dev->chip_id == BCM53010_DEVICE_ID ||
@@ -308,6 +308,7 @@ static inline int b53_switch_get_reset_gpio(struct b53_device *dev)
 	enum bcm47xx_board board = bcm47xx_board_get();
 
 	switch (board) {
+	case BCM47XX_BOARD_LINKSYS_WRT300NV11:
 	case BCM47XX_BOARD_LINKSYS_WRT310NV1:
 		return 8;
 	default:

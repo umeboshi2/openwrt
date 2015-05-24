@@ -25,7 +25,7 @@
 		#size-cells = <1>;
 
 		uboot: partition@0 {
-			label = "u-boot";
+			label = "uboot";
 			reg = <0x0 0x50000>;
 			read-only;
 		};
@@ -54,12 +54,16 @@
 		ralink,portmap = <0x3f>;
 	};
 
+	wmac@10180000 {
+		ralink,mtd-eeprom = <&uboot 0x40000>;
+	};
+
 	otg@101c0000 {
 		status = "okay";
 	};
 
 	rtl8366rb {
-		compatible = "rtl8367rb";
+		compatible = "rtl8366rb";
 		gpio-sda = <&gpio0 1 0>;
 		gpio-sck = <&gpio0 2 0>;
 	};

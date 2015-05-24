@@ -114,7 +114,8 @@ define KernelPackage/et131x
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=Agere ET131x Gigabit Ethernet driver
   URL:=http://sourceforge.net/projects/et131x
-  FILES:=$(LINUX_DIR)/drivers/staging/et131x/et131x.$(LINUX_KMOD_SUFFIX)
+  FILES:= \
+	$(LINUX_DIR)/drivers/net/ethernet/agere/et131x.ko
   KCONFIG:= \
 	CONFIG_ET131X \
 	CONFIG_ET131X_DEBUG=n
@@ -127,6 +128,24 @@ define KernelPackage/et131x/description
 endef
 
 $(eval $(call KernelPackage,et131x))
+
+
+define KernelPackage/gw16083
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=Gateworks Ventana Ethernet Expansion Mezzanine driver
+  URL:=http://www.gateworks.com
+  FILES:=$(LINUX_DIR)/drivers/net/phy/gw16083.ko
+  KCONFIG:=CONFIG_GATEWORKS_GW16083
+  DEPENDS:=@TARGET_imx6 @PCI_SUPPORT +kmod-libphy +kmod-igb
+  AUTOLOAD:=$(call AutoLoad,36,gw16083)
+endef
+
+define KernelPackage/gw16083/description
+ This package contains the gw16083 kernel module for supporting the Gateworks
+ Ventana Ethernet Expansion Mezzanine.
+endef
+
+$(eval $(call KernelPackage,gw16083))
 
 
 define KernelPackage/swconfig
@@ -353,7 +372,7 @@ $(eval $(call KernelPackage,8139cp))
 define KernelPackage/r8169
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=RealTek RTL-8169 PCI Gigabit Ethernet Adapter kernel support
-  DEPENDS:=@PCI_SUPPORT +kmod-mii
+  DEPENDS:=@PCI_SUPPORT +kmod-mii +r8169-firmware
   KCONFIG:=CONFIG_R8169 \
     CONFIG_R8169_NAPI=y \
     CONFIG_R8169_VLAN=n
@@ -430,7 +449,7 @@ $(eval $(call KernelPackage,e1000))
 define KernelPackage/e1000e
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=Intel(R) PRO/1000 PCIe cards kernel support
-  DEPENDS:=@PCIE_SUPPORT +(!LINUX_3_3&&!LINUX_3_6):kmod-ptp
+  DEPENDS:=@PCIE_SUPPORT +kmod-ptp
   KCONFIG:=CONFIG_E1000E
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/e1000e/e1000e.ko
   AUTOLOAD:=$(call AutoProbe,e1000e)
@@ -443,10 +462,28 @@ endef
 $(eval $(call KernelPackage,e1000e))
 
 
+define KernelPackage/igb
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=Intel(R) 82575/82576 PCI-Express Gigabit Ethernet support
+  DEPENDS:=@PCI_SUPPORT +kmod-i2c-algo-bit +kmod-ptp
+  KCONFIG:=CONFIG_IGB \
+    CONFIG_IGB_HWMON=n \
+    CONFIG_IGB_DCA=n
+  FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/igb/igb.ko
+  AUTOLOAD:=$(call AutoLoad,35,igb)
+endef
+
+define KernelPackage/igb/description
+ Kernel modules for Intel(R) 82575/82576 PCI-Express Gigabit Ethernet adapters.
+endef
+
+$(eval $(call KernelPackage,igb))
+
+
 define KernelPackage/b44
   TITLE:=Broadcom 44xx driver
   KCONFIG:=CONFIG_B44
-  DEPENDS:=@PCI_SUPPORT +!TARGET_brcm47xx:kmod-ssb +kmod-mii
+  DEPENDS:=@PCI_SUPPORT @!TARGET_brcm47xx_mips74k +!TARGET_brcm47xx:kmod-ssb +kmod-mii +kmod-libphy
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/broadcom/b44.ko
   AUTOLOAD:=$(call AutoLoad,19,b44,1)
@@ -500,7 +537,7 @@ $(eval $(call KernelPackage,pcnet32))
 define KernelPackage/tg3
   TITLE:=Broadcom Tigon3 Gigabit Ethernet
   KCONFIG:=CONFIG_TIGON3
-  DEPENDS:=+!TARGET_brcm47xx:kmod-libphy +!LINUX_3_3:kmod-hwmon-core +(!LINUX_3_3&&!LINUX_3_6):kmod-ptp
+  DEPENDS:=+!TARGET_brcm47xx:kmod-libphy +kmod-hwmon-core +kmod-ptp
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/broadcom/tg3.ko
   AUTOLOAD:=$(call AutoLoad,19,tg3,1)
@@ -772,3 +809,20 @@ define KernelPackage/vmxnet3/description
 endef
 
 $(eval $(call KernelPackage,vmxnet3))
+
+
+define KernelPackage/spi-ks8995
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=Micrel/Kendin KS8995 Ethernet switch control
+  FILES:=$(LINUX_DIR)/drivers/net/phy/spi_ks8995.ko
+  KCONFIG:=CONFIG_MICREL_KS8995MA \
+	CONFIG_SPI=y \
+	CONFIG_SPI_MASTER=y
+  AUTOLOAD:=$(call AutoLoad,50,spi_ks8995)
+endef
+
+define KernelPackage/spi-ks8995/description
+  Kernel module for Micrel/Kendin KS8995 ethernet switch
+endef
+
+$(eval $(call KernelPackage,spi-ks8995))

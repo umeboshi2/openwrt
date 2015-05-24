@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013-2014 OpenWrt.org
+# Copyright (C) 2013-2015 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -8,13 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=rpcd
-PKG_VERSION:=2014-01-12
+PKG_VERSION:=2015-05-17
 PKG_RELEASE=$(PKG_SOURCE_VERSION)
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=git://nbd.name/luci2/rpcd.git
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)
-PKG_SOURCE_VERSION:=0c4e97b4e7b440d02aec3aff9d06c9bc93717571
+PKG_SOURCE_VERSION:=3d655417ab44d93aad56a6d4a668daf24b127b84
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 PKG_MAINTAINER:=Jo-Philipp Wich <jow@openwrt.org>
 
